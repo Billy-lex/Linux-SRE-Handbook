@@ -68,10 +68,30 @@ linux/
     └── storage/
         └── disk-full/
             ├── README.md
-            └── check_disk.py
+            └── check_disk.sh
 ```
 
 A case may contain only documentation, or documentation together with automation and supporting files.
+
+## Cases
+
+| # | Category | Case | Description |
+|---|----------|------|-------------|
+| 1 | cpu | [high-cpu](linux/troubleshooting/cpu/high-cpu/) | CPU usage spike, locate the offending process |
+| 2 | memory | [high-memory](linux/troubleshooting/memory/high-memory/) | Memory pressure, OOM killer, swap thrashing |
+| 3 | storage | [disk-full](linux/troubleshooting/storage/disk-full/) | Filesystem out of space, includes `check_disk.sh` |
+| 4 | storage | [inode-full](linux/troubleshooting/storage/inode-full/) | Inode exhaustion — space available but cannot create files |
+| 5 | storage | [read-only-filesystem](linux/troubleshooting/storage/read-only-filesystem/) | Filesystem remounted read-only due to errors |
+| 6 | process | [zombie-process](linux/troubleshooting/process/zombie-process/) | Zombie/defunct processes accumulating |
+| 7 | service | [service-failed](linux/troubleshooting/service/service-failed/) | systemd service fails to start |
+| 8 | networking | [port-not-listening](linux/troubleshooting/networking/port-not-listening/) | Port not listening, connection refused |
+| 9 | dns | [dns-resolution-failed](linux/troubleshooting/dns/dns-resolution-failed/) | DNS resolution fails, hostname cannot be resolved |
+| 10 | ssh | [ssh-connection-failed](linux/troubleshooting/ssh/ssh-connection-failed/) | Cannot establish SSH connection |
+| 11 | ssh | [ssh-authentication-failed](linux/troubleshooting/ssh/ssh-authentication-failed/) | SSH key or password authentication rejected |
+| 12 | permissions | [permission-denied](linux/troubleshooting/permissions/permission-denied/) | Permission denied — Unix, SELinux, ACL, immutable |
+| 13 | boot | [boot-failure](linux/troubleshooting/boot/boot-failure/) | System fails to boot, rescue mode recovery |
+| 14 | logs | [log-rotation-failed](linux/troubleshooting/logs/log-rotation-failed/) | logrotate not working, logs grow unchecked |
+| 15 | application | [http-502-bad-gateway](linux/troubleshooting/application/http-502-bad-gateway/) | Reverse proxy returns 502, backend unreachable |
 
 ---
 
