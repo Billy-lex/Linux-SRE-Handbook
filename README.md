@@ -92,6 +92,7 @@ A case may contain only documentation, or documentation together with automation
 | 13 | boot | [boot-failure](linux/troubleshooting/boot/boot-failure/) | System fails to boot, rescue mode recovery |
 | 14 | logs | [log-rotation-failed](linux/troubleshooting/logs/log-rotation-failed/) | logrotate not working, logs grow unchecked |
 | 15 | application | [http-502-bad-gateway](linux/troubleshooting/application/http-502-bad-gateway/) | Reverse proxy returns 502, backend unreachable |
+| 16 | storage | [disk-io-bottleneck](linux/troubleshooting/storage/disk-io-bottleneck/) | Disk I/O saturation — from symptom to identifying the offending process |
 
 ---
 
