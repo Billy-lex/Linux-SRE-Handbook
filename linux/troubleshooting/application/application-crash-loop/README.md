@@ -21,7 +21,7 @@ systemctl show <service-name> -p NRestarts
 ```
 
 - If `Active: active (running) since ...` shows a timestamp only seconds or minutes ago, the service likely just restarted.
-- If `NRestarts` is a high number (e.g., 47), the service is in a crash loop.
+- If `NRestarts` is a high number (e.g., 47), this strongly suggests a crash loop.
 
 To watch it happening in real time:
 
@@ -48,17 +48,24 @@ Focus on the log lines just before each exit. Common patterns:
 | `Segmentation fault` | Application bug or corrupted binary |
 | `Panic`, `unhandled exception` | Application-level error (bad config, missing variable) |
 
-For OOM specifically, also check the kernel log:
+For OOM specifically, check the kernel messages in the journal:
 
 ```bash
-dmesg -T | grep -i "oom\|killed process"
+journalctl -k --since "1 hour ago" | grep -Ei "oom|out of memory|killed process"
 ```
 
-If the journal output is truncated, run the application manually to see the full crash output:
+If the journal output is truncated, run the application manually to see the full crash output. First, check the unit file to replicate the execution environment:
+
+```bash
+systemctl cat <service-name>
+```
+
+Note the `ExecStart`, `User`, `EnvironmentFile`, and `WorkingDirectory` directives, then run accordingly:
 
 ```bash
 systemctl stop <service-name>
-/path/to/application --config /etc/myapp/config.yaml
+# Match the User, WorkingDirectory, and environment from the unit file
+sudo -u <user> /path/to/application --config /etc/myapp/config.yaml
 ```
 
 ### 3. Categorize the Root Cause
@@ -69,7 +76,7 @@ Based on the exit reason found in step 2, classify it into one of four categorie
 |---|---|---|
 | **Application** | Segfault, panic, unhandled exception | Stack trace in journal; reproduces when run manually |
 | **Dependency** | Connection refused/timed out to database, cache, or API | `nc -vz <dep-host> <port>` fails |
-| **Resource** | OOM killed, high memory usage | `dmesg` OOM entries; `free -h` shows low available memory |
+| **Resource** | OOM killed, high memory usage | `journalctl -k` OOM entries; `free -h` shows low available memory |
 | **Configuration** | Permission denied, ENOENT, invalid config, missing env var | Error message points to a specific file or variable |
 
 Also check the restart policy — if `StartLimitBurst` is not set, the crash loop will run indefinitely:
@@ -98,14 +105,16 @@ systemctl restart <service-name>
 **Prevent infinite loops** — configure restart limits so systemd stops retrying after a reasonable number of attempts:
 
 ```ini
+[Unit]
+StartLimitIntervalSec=300
+StartLimitBurst=3
+
 [Service]
 Restart=on-failure
 RestartSec=5s
-StartLimitIntervalSec=300
-StartLimitBurst=3
 ```
 
-This allows at most 3 restarts within 300 seconds. After that, systemd marks the service as failed — making the problem visible instead of hiding it behind an endless restart cycle.
+This limits how frequently systemd will attempt to start the service within the configured time window. Once the limit is reached, systemd marks the service as failed — making the problem visible instead of hiding it behind an endless restart cycle.
 
 ```bash
 systemctl daemon-reload   # if the unit file was changed
