@@ -15,7 +15,14 @@ A reverse proxy (Nginx, Apache, HAProxy) returns HTTP 502 Bad Gateway. This mean
 
 ## Troubleshooting
 
+> **Host legend:** Each step is marked with where to run it.
+> - 🔵 **Proxy** — the reverse proxy host (Nginx / Apache / HAProxy)
+> - 🟢 **Backend** — the upstream application server
+> - 🔵🟢 **Either** — same-host setup, or run on both as noted
+
 ### 1. Check if the backend application is running
+
+> 🟢 **Backend**
 
 ```bash
 systemctl status <backend-service>
@@ -25,6 +32,8 @@ If the service is stopped or failed, this is the most likely cause. Check the ac
 
 ### 2. Check if the backend is listening on the expected port
 
+> 🟢 **Backend**
+
 ```bash
 ss -tlnp | grep <port>
 ```
@@ -33,13 +42,33 @@ Confirm the backend process is bound to the correct address and port. A common m
 
 ### 3. Connect to the backend directly (bypass the proxy)
 
+> 🟢 **Backend** (localhost) or 🔵 **Proxy** (pointing at backend IP)
+
 ```bash
 curl -v http://localhost:<backend-port>/
 ```
 
 If this succeeds, the backend is healthy and the problem is in the proxy configuration or the network path between them. If this also fails, the backend itself is the problem.
 
-### 4. Check reverse proxy error logs
+### 4. Test TCP connectivity between proxy and backend
+
+> 🔵 **Proxy**
+
+```bash
+nc -vz <backend-ip> <backend-port>
+```
+
+This tests whether the proxy host can actually reach the backend's TCP port. Unlike `ping` (ICMP only), `nc -vz` verifies the exact port the proxy needs to connect to. A successful result looks like:
+
+```
+Connection to 10.0.1.20 8080 port [tcp/http-alt] succeeded!
+```
+
+If it fails or times out, the problem is a firewall rule, network routing, or the backend is not listening.
+
+### 5. Check reverse proxy error logs
+
+> 🔵 **Proxy**
 
 For Nginx:
 
@@ -61,7 +90,9 @@ journalctl -u haproxy --since "1 hour ago"
 
 The error log tells you whether the proxy got a connection refused, a timeout, or an invalid response from the backend. This narrows the investigation significantly.
 
-### 5. Check the proxy configuration
+### 6. Check the proxy configuration
+
+> 🔵 **Proxy**
 
 Verify that the upstream address and port in the proxy configuration match where the backend is actually listening.
 
@@ -79,7 +110,9 @@ grep -r ProxyPass /etc/httpd/conf/
 
 A mismatch between the configured upstream and the actual backend address is a common cause of 502 errors.
 
-### 6. Check if the backend is overloaded or too slow
+### 7. Check if the backend is overloaded or too slow
+
+> 🔵 **Proxy** (timeout config) / 🟢 **Backend** (load inspection)
 
 If the backend is running but responds very slowly, the proxy may time out before getting a response. Check the proxy timeout settings:
 
@@ -91,7 +124,9 @@ grep -E 'proxy_read_timeout|proxy_connect_timeout|proxy_send_timeout' /etc/nginx
 
 Default `proxy_read_timeout` in Nginx is 60 seconds. If the backend needs more time to process requests, increase this value.
 
-### 7. Check firewall rules between proxy and backend
+### 8. Check firewall rules between proxy and backend
+
+> 🔵 **Proxy** and 🟢 **Backend** (check both sides)
 
 If the proxy and backend are on different hosts, firewall rules may be blocking the connection:
 
@@ -105,7 +140,9 @@ firewall-cmd --list-all
 
 On the same host, SELinux or local firewall rules can also prevent the proxy from connecting to the backend port.
 
-### 8. Check backend application logs for crashes or errors
+### 9. Check backend application logs for crashes or errors
+
+> 🟢 **Backend**
 
 ```bash
 journalctl -u <backend-service> --since "1 hour ago"
@@ -154,11 +191,15 @@ Common root causes of HTTP 502:
 
 After applying the fix, confirm the backend responds directly:
 
+> 🟢 **Backend**
+
 ```bash
 curl -v http://localhost:<backend-port>/
 ```
 
 Then test through the proxy:
+
+> 🔵 **Proxy** (or any client host)
 
 ```bash
 curl -v http://<proxy-host>/
@@ -166,11 +207,15 @@ curl -v http://<proxy-host>/
 
 Check the proxy error log for new errors:
 
+> 🔵 **Proxy**
+
 ```bash
 tail -10 /var/log/nginx/error.log
 ```
 
 Confirm the backend service is stable:
+
+> 🟢 **Backend**
 
 ```bash
 systemctl status <backend-service>
